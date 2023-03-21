@@ -1,0 +1,419 @@
+# What is Git?
+Git is a Distributed Version Control System. Developers use synchronizing mechanisms like pull ("Tell me the changes") and push ("Push these changes"). The system of record is the remote origin repository (like Github or Azure Repos).
+
+Using this system, Developers work with a local copy of the entire repository, but they have to communicate and follow a process and minimize conflict. There will be conflicts, but many can be avoided if developers consistently commit and push their new code from their local machine to the remote origin.
+
+![distributed](../Images/distributed.png)
+
+# Initial Configuration
+To enable the source control features within VSCode, you must add a line to the JSON setting to tell VSCode where ```git.exe``` is
+
+![settings](../Images/settings.png)
+
+To start using git, configure the user ```username``` and ```user.email```
+```powershell
+#Check version
+git --version
+
+#Config repository credentials
+git config --global --list
+git config user.name
+git config user.email
+
+
+#Turn any folder into a repo, creates .git folder
+git status
+git init
+git status
+
+#View the hidden folder
+Get-ChildItem -Force   #notice the .git
+
+#Clone the DevOps Master Class Repo into the current folder
+git clone https://github.com/johnthebrit/DevOpsMC.git .
+
+#Clone into a new subfolder auto created under current path
+git clone https://github.com/johnthebrit/DevOpsMC.git
+
+#This is very common to use instead of master
+git config --global init.defaultBranch main 
+
+#When you create a new repo you can override the default initial branch
+git init --initial-branch=main
+git init -b main
+
+#See config of remote origin
+git config --list --show-origin
+```
+
+# Working with ```commit``` in Git
+
+A commit is a complete snapshot of the entire repository. It represents a specific point in time. The internal workings of git use a hierarchical structure of folder and file objects in the filesystem to track changes and maintain integrity.
+## Every commit includes these components:
+| Component | Description                             |
+| --------- | --------------------------------------- |
+| tree      | a list of .zlib compressed file objects |
+| blob(s)   | 1 blob for each file in the repo        |
+| object(s) | 1 object for each commit                |
+| metdata   | author, parent                          |
+| parent    | the next commit after changes are made  |
+
+![commit](/Images/commit.png)
+
+## Use ```git add .``` to stage any changes to the next commit 
+```powershell
+#Pay attention to the current .git folder content, especially the objects folder
+git add .
+#Notice we now have a new object in a 2 character folder name with 38 character name, i.e. 40 character hash
+git status
+git diff --cached #Difference between staged and what is commited
+git commit -m "Initial testfile.txt commit"
+#We have two new objects created! The path and the commit itself
+```
+![git add .2](../images/gitadd.2.png)
+
+###  Alternatively, you can combine the add and commit with a single command
+```powershell
+git commit -am "Initial testfile.txt commit"
+#or even
+git commit -a -m "Initial testfile.txt commit"
+```
+
+# Maintaining integrity in Git
+Git maintains integrity of the version history by generating a unique 40 character SHA-1 hash for the blob and objects associated. Everything is an object in the .git filesystem. Git shards each unique 40 character hash into a folder with a 2 character name and a 38 character object inside:
+```
+📦repo
+ ┣ 📂.git
+ ┃ ┣ 📂objects
+ ┃ ┃ ┣📂object (2 character hash)
+ ┃ ┃ ┃ ┗📜object (38 character hash)
+ ┃ ┃ ┣📂object
+ ┃ ┃ ┃ ┗📜object
+ ┃ ┃ ┣📂object
+ ┗ ┗ ┗ ┗📜object
+```
+
+![git add .](../Images/gitadd..png)
+
+
+# Using metadata in Git
+## View details with ```git log```
+![gitlog](/Images/gitlog.png)
+
+## View type with ```git cat-file -t```
+```powershell
+#look at the type
+git cat-file -t <first 7 of the hash shown for the commit>
+```
+![type](/Images/type.png)
+
+## View content with ```git cat-file -p```
+```powershell
+#look at the content
+git cat-file -p <first 7 of the hash shown for the commit>
+```
+![commit](/Images/content.png)
+
+## Example with a tree
+```powershell
+#look at the type
+git cat-file -t <first 7 of the hash shown for the commit>
+#look at the content. Notice here it points the blob we saw created before and now has a file name
+git cat-file -p <first 5 of the hash shown for the tree in commit file>
+```
+![tree](/Images/treecontent.png)
+
+## Example with a blob
+![blob](/Images/blob.png)
+
+## Add lightweight tags with `git tag <tag> <previous commit>`
+```powershell
+#I can create a tag at the current location
+git tag v1.0.0
+gitgraph
+git tag v0.9.1 <previous commit>
+gitgraph
+```
+![tag](images/../../Images/tags.png)
+
+## View all tags with `git tag --list`
+![tag--list](images/../../Images/tag--list.png)
+
+## Show a commit by it's tag with `git show <tag>`
+```powershell
+#lets look at a commit that is tagged. Show gives information about an object. For a commit the log message and diff
+git show v1.0.0
+#We just see the commit object
+```
+![gitshow](/Images/gitshow.png)
+
+#  Add annotated tags with `git tag -a <tag> <commit hash> -m <lightweight tag>`
+```powershell
+#There is also an annotated type which is a full object with its own message
+git tag -a v0.0.1 <commit hash> -m "First version"
+```
+![annotated](/Images/annotated.png)
+
+```powershell
+git show v0.0.1
+```
+![annotatedshow](../Images/annotatedshow.png)
+
+## Comparing annotated vs lightweight tags
+```powershell
+#we see the TAG information AND then the commit it references
+git cat-file -t v0.0.1
+git cat-file -t v1.0.0
+```
+![annotatedvslightweight](/images/annotatedvslightweight.png)
+
+## Push tags to `remote origin` with `git push --tag`
+```powershell
+#Note tags have to be pushed to a remote origin for them to be visible there. We will cover later
+git push --tag
+```
+
+# Git only stores unique content
+Since the unique hash of a blob is created with file data, a duplicate file would result in both files being tied to the same blob. Thus, Git will not create duplicate blobs for duplicate files.
+```powershell
+#Lets prove a point about it only storing unique content
+Copy-Item .\testfile.txt .\testfile2.txt
+git add .
+#what new object do we have? Nothing.
+git status
+git commit -m "testfile2.txt added"
+#We have new files. Look again
+```
+![uniquecontent](../Images/uniquecontent.png)
+
+# Working with ```HEAD``` in Git
+How does Git know which commit a dev is working on? When a dev is working in VSCode, they are working on a branch, which is always pointing to a particular commit. In other words, A branch is just a reference to a certain commit. The way git "knows" what you are working on is by using the HEAD.
+
+![refs](../Images/refs.png)
+
+## Example
+
+The ```📂heads``` folder stores all of the branches. While the ```📜HEAD``` file stores the reference. In this example, ```HEAD``` is pointing to ```main```, and ```main``` is referencing a commit.
+```
+📦repo
+ ┣ 📂.git
+ ┃ ┣ 📂refs
+ ┃ ┃ ┗📂heads
+ ┃ ┃   ┗📜main
+ ┗ ┗📜HEAD
+```
+
+### ```HEAD``` is referencing ```main```
+![headreference](../Images/headreference.png)
+
+### ```main``` is referencing a ```commit```
+![head](../Images/head.png)
+
+# Staging in Git
+Devs are often working on numerous parts of a project, and will want to be precise with what they are committing, and where they are commiting it to.Staging is the process of using ```git add .``` to decide what files to include in a particular ```commit```
+
+![staging](../Images/staging.png)
+
+## Use ```git status``` to see what is staged
+```powershell
+#Modify a file and stage
+code .\testfile.txt
+git add testfile.txt
+git status
+#add a 3rd file but don't stage
+code .\testfile3.txt
+git status
+
+git commit -m "updated testfile"
+git status
+#notice our untracked file, i.e. working is not changed but staging is now matching the repo
+```
+
+## Create a `function` with `git log` to nice view of the history of a branch
+ ```powershell
+git log --oneline --graph --decorate --all   #I will be using this a lot
+
+#Create a function for nice git log command
+function gitgraph {git log --oneline --graph --decorate --all}
+
+#Could add this to your profile
+code $profile
+```
+![gitgraph](../Images/gitgraph.png)
+
+## Use `git log -p` to view differences between various files in a commit
+```powershell
+#We can look at the changes
+git log -p #also shows the diff/patch between the commits :q
+```
+
+## Use `git diff` to view differences between commits
+```powershell
+git diff <commit>..<commit> #diff between specific commits
+#Remember the complete snapshot is stored. All diffs are generated at time of command execution
+```
+![gitdiff](../Images/gitdiff.png)
+
+## Use `git diff --cached` to view difference of what is staged and HEAD
+```powershell
+#Between what is staged and the HEAD commit (i.e. the REPO). Could also use --staged which is synonym of --cached
+git diff --cached
+```
+
+## Use `git diff HEAD` to see the difference between the working and last commit
+```powershell
+#Between working and the last commit (i.e. head)
+git diff HEAD #basically the sum of the above two)
+```
+![differences](../Images/differences.png)
+
+## Use `git rm` to delete from staging and working directory
+```powershell
+#stage the removal (which will also delete from working)
+git rm <file>
+#Then you need to commit as normal
+git commit -m "Removed file x"
+```
+### Example
+```powershell
+code testfile4.txt
+git add testfile4.txt
+git commit -m "adding testfile4.txt"
+git status
+git rm testfile4.txt
+git status #Note the delete is staged
+```
+
+![gitrm](../Images/gitrm.png)
+
+```powershell
+ls #its gone from stage AND my working
+git commit -m "removed testfile4.txt" #to actually remove the file
+```
+
+![ls](/images/ls.png)
+## Use `git rm --cached` to delete from staging, but not delete from working directory
+```powershell
+#to ONLY stage the remove (but not delete from working)
+git rm --cached <file>
+#Could also just delete from working then "add" all changes
+git add .
+```
+
+## Use `git reset` to reset staging and match the last commit
+```powershell
+#Remove all staged content. This is actually using --mixed which is default. More later
+git reset
+#It does this by setting staged to match the last commit
+#It does NOT change your working dir
+git reset --hard
+#Would also change your working directory to match!
+```
+![gitreset](../Images/gitreset.png)
+
+### Use `git reset --mixed` to reset staging to the last commit
+- The `--mixed` parameter is actually the default for `git reset`
+  
+```powershell
+#to also reset staging. Note as I'm not specifying a commit its resetting working to the current commit which i've rolled back already
+#--mixed is actually the default, i.e. same as git reset which we did before to reset staging!
+git reset --mixed
+git status
+```
+![gitreset--mixed](/Images/gitreset--mixed.png)
+![gitreset--mixed-2](../Images/gitreset--mixed-2.png)
+
+### Use `git reset --soft` to undo a `commit`, but keep staging the same
+To undo a commit, but leave staging the same, change `HEAD` to the previous `commit`. The previous `commit` is tied to its own `tree`, which contains all the changes from the latter `commit`.
+
+![gitresetsoft~1](../Images/gitresethead~1.png)
+```powershell
+#to view all
+git log
+gitgraph
+```
+![gitresethead~1-2](../Images/gitresethead~1-2.png)
+
+```powershell
+#Remember, a branch is just a pointer to a commit which points to its parent
+#We can just move the pointer backwards!
+#Move back 1 but do not change staging or working. Could go back 2, 3 etc ~2, ~3
+git reset HEAD~1 --soft
+gitgraph
+```
+![gitresetheadsoft~1-3](/images/gitresethead~1-3.png)
+
+```powershell
+git status
+#So staging still has the change that was part of the last commit that is no longer referenced
+#Notice we have moved back but did not change staging or working
+```
+![gitresetheadsoft~1-4](/images/gitresethead~1-4.png)
+![gitreset--soft](/images/gitreset--soft.png)
+
+```powershell
+#Could also reset by a specific commit ID
+git reset <first x characters of commit> --soft
+```
+
+## Use `git reset --hard` reset staging and working to the last commit
+```powershell
+#Now to also reset working. Again since no commit specified its just setting to match current commit. This should look familiar!
+#--hard changes staging and working
+git reset --hard
+git status
+#Now clean
+```
+
+![gitreset--hard](images/../../Images/gitreset--hard.png)
+![gitreset--hard-2](images/../../Images/gitreset--hard-2.png)
+
+```powershell
+#Could do all in one go
+gitgraph
+git reset HEAD~1 --hard
+gitgraph
+git status
+#all clean since --hard reset all levels back
+
+#The now unreferenced commit will eventually be garbage collected
+```
+
+### Use `git restore --staged` to reset individual files in staged
+```powershell
+#Can reset individual files
+code testfile.txt
+```
+![gitrestore](/images/gitrestore.png)
+![girestore2](../Images/gitrestore2.png)
+
+```powershell
+#Restore version in staged (from last commit HEAD) but NOT working
+git restore --staged testfile.txt
+git status
+```
+![gitrestore---staged](/images/gitrestore--staged.png)
+
+### More Examples with `git reset`
+```powershell
+#Restore working from stage
+git restore testfile.txt
+git status
+code testfile.txt
+#Restore to stage and working from last commit
+git restore --staged --worktree testfile.txt
+#Full version but not required is to say from where by this is default anyway but could specify different
+git restore --source=HEAD --staged --worktree testfile.txt
+```
+![gitresetmore](/images/gitrestoremore.png)
+
+# Working with `remote origin` in Git
+https://youtu.be/hQJktcBzJUs?t=5153
+
+
+
+
+
+
+# Working with branch in Git
+A branch is just a pointer to a certain commit.
