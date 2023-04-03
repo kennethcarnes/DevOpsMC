@@ -313,7 +313,6 @@ git reset --hard
 
 ### Use `git reset --mixed` to reset staging to the last commit
 - The `--mixed` parameter is actually the default for `git reset`
-  
 ```powershell
 #to also reset staging. Note as I'm not specifying a commit its resetting working to the current commit which i've rolled back already
 #--mixed is actually the default, i.e. same as git reset which we did before to reset staging!
@@ -408,12 +407,68 @@ git restore --source=HEAD --staged --worktree testfile.txt
 ![gitresetmore](/images/gitrestoremore.png)
 
 # Working with `remote origin` in Git
-https://youtu.be/hQJktcBzJUs?t=5153
+Remote origin is the shared repo that you are connected to.
+## List your connections with `git remote -v`
+![git remote -v](../images/git%20remote%20-v.png)
+## Push your local repo to remote origin with `git push -u origin main`
+![git push -u origin main](../images/gitpush-uoriginmain.png)
+## Push your tags in working directory to the remote origin with `git push --tag`
+![git push --tag](../images/gitpush--tag.png)
+## Merge your working directory with a remote repo with `git pull`
+- Best practice is to always do `git pull` first
+- `git pull` combines `git fetch` and `git merge`
+- `git fetch` will show you the changes between remote origin and your working directory.
+- `git merge` will merge changes.
+## Make a local copy of a remote repo with `git clone`
+
+## Exclude files from git with `.gitignore`
 
 
 
-
-
-
-# Working with branch in Git
+# Working with a branch in Git
 A branch is just a pointer to a certain commit.
+- Anytime you are working on a change, it is best practice to commit changes to seperate branch that you create.
+- You still need to perform frequent merges of changes to main, so you can find and fix it early.
+- Companies have varying requirements for when to merge changes to main.
+### A common approach is **Trunk-based Development**
+With this method, changes are frequently merged into main or another branch so that issues can be found and fixed earlier.
+## View all branches with `git branch --list`
+## Point `HEAD` to another branch with `git checkout` or `git switch`
+- As you switch branches, your staging and working directory will update along with it.
+## Create and Checkout a branch with `git checkout -c` or `git switch -c`
+- `git switch` is preferred because checkout has many other functionalities
+## Show branches that are merged with `git branch --merged`
+## Delete a branch in working directory with `git branch -d`
+## Delete a branch in remote origin with `git push origin --delete`
+- It is best practice to delete branches that have been merged, and are no longer used.
+- Use `git reflog` to find commit after a branch is deleted
+![git reflog](../images/gitreflog.png)
+# 3-way merges vs. `git rebase`
+When someone makes an update to main, you may want to update your branch with the changes. Merging multiple commits, can make the version history complicated.
+## Use `git rebase` to pull changes from main into your branch
+  This is helpful when you want to fix changes ahead of merging to main branch.
+
+  ```powershell
+  #Need to be ON the branch we are performing the action on. We are rebasing branch1
+  git switch branch1
+  #check its clean
+  git status
+  #Lets rebase off main
+  git rebase main
+  #We will get conflicts as it replays each of the changes so each        time will need to address and continue
+  code jl.csv
+  git add jl.csv
+  #Continue working through changes with each of the previous commits
+  git rebase --continue
+  ```
+# `git rebase` is clean and simple, but it removes commit history
+- 3-way merge
+![3-way merge](../Images/3-way%20merge.png)
+- `git rebase`
+![git rebase](../images/gitrebase.png)
+# **Never `rebase` a public branch!**
+- You will remove commit history and people will be upset.
+- It's fine for your branch, but not for someone else's.
+## Clone a repo into another account with `fork`
+## A **Pull Request** is the process of requesting someone to "pull" your branch into their branch
+- Your branch could be a branch from a forked repository or a branch in the same repository where you are creating the pull request.
